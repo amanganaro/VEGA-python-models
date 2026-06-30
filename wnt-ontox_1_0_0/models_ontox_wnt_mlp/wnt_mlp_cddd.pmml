@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PMML version="4.2" xmlns="http://www.dmg.org/PMML-4_2">
+  <Header copyright="Mirko Gadaleta">
+    <Application name="KNIME" version="4.7.2"/>
+  </Header>
+  <DataDictionary numberOfFields="4">
+    <DataField name="Category" optype="categorical" dataType="string">
+      <Value value="active"/>
+      <Value value="not active"/>
+    </DataField>
+    <DataField name="150" optype="continuous" dataType="double">
+      <Interval closure="closedClosed" leftMargin="-0.8623313307762146" rightMargin="0.3411861062049866"/>
+    </DataField>
+    <DataField name="252" optype="continuous" dataType="double">
+      <Interval closure="closedClosed" leftMargin="-0.8960008025169373" rightMargin="0.8252652883529663"/>
+    </DataField>
+    <DataField name="294" optype="continuous" dataType="double">
+      <Interval closure="closedClosed" leftMargin="-0.9318258166313171" rightMargin="0.4559016823768616"/>
+    </DataField>
+  </DataDictionary>
+  <NeuralNetwork functionName="classification" algorithmName="RProp" activationFunction="logistic" normalizationMethod="none" width="0.0" numberOfLayers="2">
+    <MiningSchema>
+      <MiningField name="150" invalidValueTreatment="asIs"/>
+      <MiningField name="252" invalidValueTreatment="asIs"/>
+      <MiningField name="294" invalidValueTreatment="asIs"/>
+      <MiningField name="Category" invalidValueTreatment="asIs" usageType="target"/>
+    </MiningSchema>
+    <NeuralInputs numberOfInputs="3">
+      <NeuralInput id="0,0">
+        <DerivedField optype="continuous" dataType="double">
+          <FieldRef field="150"/>
+        </DerivedField>
+      </NeuralInput>
+      <NeuralInput id="0,1">
+        <DerivedField optype="continuous" dataType="double">
+          <FieldRef field="252"/>
+        </DerivedField>
+      </NeuralInput>
+      <NeuralInput id="0,2">
+        <DerivedField optype="continuous" dataType="double">
+          <FieldRef field="294"/>
+        </DerivedField>
+      </NeuralInput>
+    </NeuralInputs>
+    <NeuralLayer>
+      <Neuron id="1,0" bias="0.8399655105159937">
+        <Con from="0,0" weight="-7.8032045369236025"/>
+        <Con from="0,1" weight="-2683.483483286087"/>
+        <Con from="0,2" weight="-62.09128423716316"/>
+      </Neuron>
+      <Neuron id="1,1" bias="1.0690509584845305">
+        <Con from="0,0" weight="9.50993462045256"/>
+        <Con from="0,1" weight="-0.29112409317544635"/>
+        <Con from="0,2" weight="-4.778083403154811"/>
+      </Neuron>
+    </NeuralLayer>
+    <NeuralLayer>
+      <Neuron id="2,0" bias="-5.886206783973669">
+        <Con from="1,0" weight="13.443816087837256"/>
+        <Con from="1,1" weight="17.30153043361525"/>
+      </Neuron>
+      <Neuron id="2,1" bias="6.460431147568324">
+        <Con from="1,0" weight="-14.828720661978545"/>
+        <Con from="1,1" weight="-19.178959042984552"/>
+      </Neuron>
+    </NeuralLayer>
+    <NeuralOutputs numberOfOutputs="2">
+      <NeuralOutput outputNeuron="2,0">
+        <DerivedField optype="categorical" dataType="string">
+          <NormDiscrete field="Category" value="active"/>
+        </DerivedField>
+      </NeuralOutput>
+      <NeuralOutput outputNeuron="2,1">
+        <DerivedField optype="categorical" dataType="string">
+          <NormDiscrete field="Category" value="not active"/>
+        </DerivedField>
+      </NeuralOutput>
+    </NeuralOutputs>
+  </NeuralNetwork>
+</PMML>
