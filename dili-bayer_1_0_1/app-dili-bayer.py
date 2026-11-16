@@ -127,6 +127,10 @@ def main():
     file_output_location = sys.argv[2]
     test_df = pd.read_csv(file_location)
     test_df = prepare_structures(test_df, smiles_col='smiles')
+    # prepare_structures drops the rows it cannot handle and leaves gaps in the index, while the predictions below
+    # are built with a fresh 0..M-1 index. Without this the merge on the index would lose rows, or pair a
+    # prediction with the wrong molecule, as soon as one row has been dropped.
+    test_df = test_df.reset_index(drop=True)
     x_test = test_df[[c for c in test_df if 'cddd' in c]].values
     mean_pred, pred_task = make_predictions_with_ensemble(x_test)
     test_pred = test_df.merge(mean_pred, right_index=True, left_index=True)

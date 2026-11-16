@@ -107,8 +107,11 @@ def inference(models:dict, smiles, target_dict:dict, singlemol=True):
 
     if singlemol: 
         return pd.DataFrame(pd.DataFrame(results_final, index=[smiles]))
-    else: 
-        return pd.DataFrame(pd.DataFrame([results_final]))#, index=smiles)
+    else:
+        # One row per molecule, one column per model. results_final maps every model name to an array of N
+        # predictions, so it is handed to the DataFrame as it is: wrapping it in a list would instead build a
+        # single row whose cells hold the arrays.
+        return pd.DataFrame(results_final)
 
 if __name__ == "__main__":
 
@@ -141,7 +144,8 @@ if __name__ == "__main__":
     target_dict = transform_data(models=models, target_CDDD=target_CDDD)
     results = inference(models=models,
                         smiles=target_CDDD['smiles'].tolist(),
-                        target_dict=target_dict)
+                        target_dict=target_dict,
+                        singlemol=False)
 
     results.reset_index(drop=True, inplace=True)
     results['smiles'] = target_CDDD['smiles'].tolist()
