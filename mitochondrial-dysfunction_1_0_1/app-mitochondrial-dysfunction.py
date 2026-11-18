@@ -18,25 +18,52 @@ def check_smiles(smiles):
         print("invalid smiles.")
         sys.exit(1)
 
-def ad_evaluation(smiles:str, radius=3, num_bits=1024, singlesmiles=False):
+def load_reference_fingerprints(radius=3, num_bits=1024):
+    """
+    Morgan fingerprints of the reference datasets, computed once and cached on disk next to each CSV.
+
+    The fingerprints of the reference molecules do not depend on the target, so they are built once per dataset
+    instead of once per target molecule. The cache is rebuilt whenever its CSV is newer than it.
+    """
+    path_folder = os.path.join(file_dir, "data-mitochondrial-dysfunction")
+    reference = {}
+    for file in sorted(os.listdir(path_folder)):
+        if not file.endswith(".csv"):
+            continue  # the cache files live in the same folder
+        csv_path = os.path.join(path_folder, file)
+        name = file.split("_")[0]
+        cache_path = csv_path + f".fp_r{radius}_n{num_bits}.pkl"
+
+        if os.path.exists(cache_path) and os.path.getmtime(cache_path) >= os.path.getmtime(csv_path):
+            with open(cache_path, 'rb') as cache:
+                reference[name] = pickle.load(cache)
+            continue
+
+        data = pd.read_csv(csv_path)
+        fingerprints = []
+        for index, smi in enumerate(data['smiles']):
+            mol = Chem.MolFromSmiles(smi)
+            if mol is None:
+                print(f"[WARN]: reference molecule {index} of {file} has an invalid SMILES, skipped: {smi}")
+                continue
+            fingerprints.append(AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=num_bits))
+        with open(cache_path, 'wb') as cache:
+            pickle.dump(fingerprints, cache)
+        reference[name] = fingerprints
+    return reference
+
+def ad_evaluation(smiles:str, reference_fps:dict, radius=3, num_bits=1024, singlesmiles=False):
     """
     check similarity between compounds in dataset and target using morgan fingerprint as descriptors
     """
     fp1 = AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smiles), radius, nBits=num_bits)
     ad_results = {}
-    path_folder = os.path.join(file_dir, "data-mitochondrial-dysfunction")
-    for file in os.listdir(path_folder):
-        path_folder_endpoint = os.path.join(path_folder, file)
-        name = file.split("_")[0]
-        data = pd.read_csv(path_folder_endpoint)
-        smiles_list = list(data['smiles'])
-        counter = 0
-        for smi in smiles_list:
-            fp2 = AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=num_bits)
-            if counter < 3: 
-                if DataStructs.DiceSimilarity(fp1, fp2) > 0.3: 
-                    counter += 1
-        
+    for name, fingerprints in reference_fps.items():
+        # Same rule as before: a molecule is in the applicability domain when at least 3 reference molecules have a
+        # Dice similarity above 0.3. BulkDiceSimilarity does the whole dataset in one C call.
+        similarities = DataStructs.BulkDiceSimilarity(fp1, fingerprints)
+        counter = sum(1 for similarity in similarities if similarity > 0.3)
+
         if counter < 3:
             ad_results[f"AD_{name}"] = 'out AD'
         else:
@@ -131,8 +158,9 @@ if __name__ == "__main__":
     print("done")
 
     print("[INFO]: AD_evaluation...")
+    reference_fps = load_reference_fingerprints()
     for n, smi in enumerate(target_CDDD['smiles']):
-        ad = ad_evaluation(smi)
+        ad = ad_evaluation(smi, reference_fps)
         if n == 0:
             ad_results = ad.copy()
         else:
