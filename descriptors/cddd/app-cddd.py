@@ -33,6 +33,20 @@ ENCODER_ROW_MULTIPLE = 128
 # short filler leaves that length, and with it the descriptors of the real molecules, untouched.
 PADDING_SMILES = "CCCC"
 
+# The trained encoder ships next to this script, in default_model, and is read from there so that
+# everything VEGA installs stays in its own folder. When that folder is missing, as with the VEGA
+# releases that moved the model to the location chosen by the cddd library (appdirs user_data_dir),
+# the library default is used instead, exactly as before.
+LOCAL_MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "default_model")
+
+
+def create_inference_model():
+    if os.path.isdir(LOCAL_MODEL_DIR):
+        print("Using the CDDD model in " + LOCAL_MODEL_DIR)
+        return InferenceModel(model_dir=LOCAL_MODEL_DIR)
+    print("Using the CDDD model in the default location of the cddd library")
+    return InferenceModel()
+
 
 def main():
     parser = argparse.ArgumentParser(description='Continuous data driven descriptors calculation')
@@ -59,7 +73,7 @@ def main():
     padding = (ENCODER_ROW_MULTIPLE - real_count % ENCODER_ROW_MULTIPLE) % ENCODER_ROW_MULTIPLE
     padded_smiles_list = filtered_smiles_list + [PADDING_SMILES] * padding
 
-    inference_model = InferenceModel()
+    inference_model = create_inference_model()
     filtered_smiles_embedding = inference_model.seq_to_emb(padded_smiles_list)[:real_count]
 
     # Create the final embeddings list, filling NaN positions with None
